@@ -1,8 +1,11 @@
 package com.example.nitin.sunshine;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.text.format.Time;
 import android.util.Log;
@@ -12,6 +15,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -27,8 +31,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Created by Nitin on 17-03-2015.
@@ -57,41 +59,52 @@ public class ForecastFragment extends Fragment {
         // Handle action bar items click here.
         int id = item.getItemId();
         if(id == R.id.action_refresh){
-            FetchWeatherTask weatherTask = new FetchWeatherTask();
-            weatherTask.execute("110085");
+            updateWeather();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-        // Dummy Data
-        String[] forecastArray = {
-                "Today - Sunny - 88/63",
-                "Tomorrow - Cloudy - 56/32",
-                "Weds - Foggy - 67/21",
-                "Thurs - Asteroids - 78/67",
-                "Fri - Heavy Rain - 56/45",
-                "Sat - Lonely - 23/12",
-                "Sun - Sunny - 67/23"
-        };
-
-        List<String> weekForecast = new ArrayList<String>(
-                Arrays.asList(forecastArray));
 
         mForecastAdapter = new ArrayAdapter<String>(
                 getActivity(),R.layout.list_item_forecast
-                ,R.id.list_item_forecast_textview,weekForecast);
+                ,R.id.list_item_forecast_textview,new ArrayList<String>());
         // Attaching adapter to listview_forecast
         ListView listView = (ListView) rootView.findViewById(R.id.listview_forecast);
         listView.setAdapter(mForecastAdapter);
 
-
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String forecast = mForecastAdapter.getItem(position);
+                Intent intent = new Intent(getActivity(),DetailActivity.class)
+                        .putExtra(Intent.EXTRA_TEXT,forecast);
+                startActivity(intent);
+                //Toast.makeText(getActivity(),mForecastAdapter.getItem(position),Toast.LENGTH_SHORT)
+                //      .show();
+            }
+        });
 
         return rootView;
+    }
+
+    private void updateWeather() {
+        FetchWeatherTask weatherTask = new FetchWeatherTask();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = prefs.getString(getString(R.string.pref_location_key),
+                getString(R.string.pref_location_default));
+        weatherTask.execute(location);
+    }
+
+    @Override
+    public void onStart() {
+        updateWeather();
+        super.onStart();
     }
 
     public class FetchWeatherTask extends AsyncTask<String,Void,String[]>{
@@ -191,7 +204,7 @@ public class ForecastFragment extends Fragment {
             }
 
             for (String s : resultStrs) {
-                Log.v(LOG_TAG, "Forecast entry: " + s);
+                //Log.v(LOG_TAG, "Forecast entry: " + s);
             }
             return resultStrs;
 
@@ -234,7 +247,7 @@ public class ForecastFragment extends Fragment {
 
                 URL url = new URL(builtUri.toString());
 
-                Log.v(LOG_TAG,"Built Uri: " + builtUri.toString());
+                //Log.v(LOG_TAG,"Built Uri: " + builtUri.toString());
 
                 // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
@@ -263,7 +276,7 @@ public class ForecastFragment extends Fragment {
                     return null;
                 }
                 forecastJsonStr = buffer.toString();
-                Log.v(LOG_TAG,"Forecast JSON String: " + forecastJsonStr);
+                //Log.v(LOG_TAG,"Forecast JSON String: " + forecastJsonStr);
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 // If the code didn't successfully get the weather data, there's no point in attemping
